@@ -1,0 +1,36 @@
+/* 临时容器样式 */
+[id^="temp-container-"] {
+    position: fixed !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+    opacity: 0 !important;
+    transform: translateZ(0) !important;
+    contain: strict !important;
+    isolation: isolate !important;
+}
+
+/* 确保主界面布局稳定 */
+.container {
+    position: relative !important;
+    z-index: 1 !important;
+    contain: layout style paint !important;
+    isolation: isolate !important;
+}
+
+/* 模态框样式优化 */
+.modal {
+    position: fixed !important;
+    z-index: 1000 !important;
+    contain: layout style paint !important;
+    isolation: isolate !important;
+}
+
+.modal-content {
+    position: relative !important;
+    z-index: 1001 !important;
+    contain: layout style paint !important;
+    isolation: isolate !important;
+} 

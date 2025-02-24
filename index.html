@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Postify.cc - 超好用的AI助手对话分享工具</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="assets/logos/postify.png">
+</head>
+<body>
+    <div class="container">
+        <!-- AI助手选择器 -->
+        <div class="ai-selector">
+            <div class="ai-option selected" data-ai="postify" title="Postify.cc">
+                <img src="assets/logos/postify.png" alt="Postify">
+                <span>Postify.cc</span>
+            </div>
+            <div class="ai-option" data-ai="kimi" title="Kimi 智能助手">
+                <img src="assets/logos/Kimi.png" alt="Kimi">
+                <span>Kimi</span>
+            </div>
+            <div class="ai-option" data-ai="deepseek" title="DeepSeek">
+                <img src="assets/logos/deepseek.png" alt="DeepSeek">
+                <span>DeepSeek</span>
+            </div>
+            <div class="ai-option" data-ai="doubao" title="豆包">
+                <img src="assets/logos/doubao.png" alt="豆包">
+                <span>豆包</span>
+            </div>
+            <div class="ai-option" data-ai="yuanbao" title="元宝">
+                <img src="assets/logos/yuanbao.png" alt="元宝">
+                <span>元宝</span>
+            </div>
+        </div>
+
+        <!-- 问题输入区域 -->
+        <div class="input-section question-section">
+            <input type="text" id="questionInput" placeholder="请输入或粘贴你的问题（可选）" />
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <button id="themeToggleBtn" class="icon-btn" title="切换深浅色模式">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 3V5M12 19V21M3 12H5M19 12H21M18.364 5.636L16.95 7.05M7.05 16.95L5.636 18.364M5.636 5.636L7.05 7.05M16.95 16.95L18.364 18.364" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button id="pasteBtn" class="icon-btn" title="粘贴剪切板内容">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <button id="undoBtn" class="icon-btn" title="撤销" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 7V11H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 11C5.32744 7.91141 8.48287 6 12 6C17.5228 6 22 10.4772 22 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button id="clearBtn" class="icon-btn" title="清空/恢复输入">
+                <svg class="trash-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 6H21M5 6V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V6M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg class="undo-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display: none;">
+                    <path d="M4 10C4 10 6 4 12 4C18 4 20 10 20 10M4 10H8M4 10L4.5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <button id="likeBtn" class="icon-btn" title="点赞">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path class="fill-path" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    <path class="stroke-path" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </button>
+            <button id="shareBtn" class="icon-btn" title="分享">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 6l-4-4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Markdown输入区域 -->
+        <div class="input-section">
+            <textarea id="markdownInput" placeholder="请返回AI助手，并复制AI助手的回复粘贴到此处"></textarea>
+        </div>
+
+        <!-- 操作按钮区域 -->
+        <div class="action-buttons">
+            <button id="copyTextBtn" class="btn primary">复制文本</button>
+            <button id="splitImageBtn" class="btn secondary">分屏切图</button>
+            <button id="exportImageBtn" class="btn secondary">导出长图</button>
+        </div>
+
+        <!-- 预览模态框 -->
+        <div id="previewModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>预览 - 可发至聊天窗口</h3>
+                    <button id="copyFinalBtn" class="btn primary">复制</button>
+                </div>
+                <div class="modal-body text-preview-body">
+                    <textarea id="previewText" readonly></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图片预览模态框 -->
+        <div id="imagePreviewModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>预览 - 可发至社交媒体</h3>
+                    <div class="modal-actions">
+                        <button id="copyImageBtn" class="btn secondary">复制图片</button>
+                        <button id="saveImageBtn" class="btn primary">保存图片</button>
+                    </div>
+                </div>
+                <div class="modal-body image-preview-body">
+                    <div id="imagePreview" class="image-preview"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入依赖库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
