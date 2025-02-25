@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "releaseDate": "2024-02-25",
+    "description": "首个正式版本",
+    "features": [
+        "移除 Postify 相关内容",
+        "支持多个主流AI助手（Kimi、DeepSeek、豆包、元宝）",
+        "支持深色/浅色模式",
+        "支持一键复制文本",
+        "支持导出长图和分屏预览",
+        "支持 Markdown 格式"
+    ],
+    "compatibility": {
+        "browsers": ["Chrome", "Safari", "Firefox", "Edge"],
+        "devices": ["Desktop", "Mobile", "Tablet"]
+    }
+} 
