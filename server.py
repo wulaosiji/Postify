@@ -10,7 +10,8 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        super().end_headers()
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        SimpleHTTPRequestHandler.end_headers(self)
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -37,6 +38,16 @@ def get_ip():
     except Exception:
         return '0.0.0.0'
 
+def run(port=PORT):
+    server_address = ('0.0.0.0', port)
+    httpd = HTTPServer(server_address, CORSRequestHandler)
+    print(f'启动本地服务器在 http://localhost:{port}/')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\n服务器已停止')
+        sys.exit(0)
+
 if __name__ == '__main__':
     # 获取本机IP
     ip = get_ip()
@@ -45,18 +56,8 @@ if __name__ == '__main__':
         # 确保当前目录是项目根目录
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         
-        # 创建服务器
-        server_address = ('0.0.0.0', PORT)
-        httpd = HTTPServer(server_address, CORSRequestHandler)
-        
-        print(f"服务器启动成功！")
-        print(f"可以通过以下地址访问：")
-        print(f"本机访问: http://localhost:{PORT}")
-        print(f"局域网访问: http://{ip}:{PORT}")
-        print(f"按 Ctrl+C 停止服务器")
-        
         # 启动服务器
-        httpd.serve_forever()
+        run()
     except OSError as e:
         if e.errno == 48:  # Address already in use
             print(f"错误：端口 {PORT} 已被占用")

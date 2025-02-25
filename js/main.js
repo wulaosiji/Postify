@@ -2,17 +2,9 @@
 const markdownInput = document.getElementById('markdownInput');
 const questionInput = document.getElementById('questionInput');
 const copyTextBtn = document.getElementById('copyTextBtn');
-const exportImageBtn = document.getElementById('exportImageBtn');
-const splitImageBtn = document.getElementById('splitImageBtn');
 const previewModal = document.getElementById('previewModal');
-const imagePreviewModal = document.getElementById('imagePreviewModal');
 const previewText = document.getElementById('previewText');
 const copyFinalBtn = document.getElementById('copyFinalBtn');
-const copyImageBtn = document.getElementById('copyImageBtn');
-const saveImageBtn = document.getElementById('saveImageBtn');
-const imagePreview = document.getElementById('imagePreview');
-const menuBtn = document.getElementById('menuBtn');
-const aiMenu = document.getElementById('aiMenu');
 const previewContent = document.getElementById('previewContent');
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -21,99 +13,6 @@ const undoBtn = document.getElementById('undoBtn');
 const likeBtn = document.getElementById('likeBtn');
 const shareBtn = document.getElementById('shareBtn');
 const likeCountSpan = document.querySelector('.like-count');
-
-// 创建一个对象来存储所有模态框相关的元素
-const modalElements = {
-    singleImageModal: null,
-    splitImageModal: null,
-    singleImagePreview: null,
-    splitImagePreview: null,
-    copySingleImageBtn: null,
-    saveSingleImageBtn: null,
-    copySplitImageBtn: null,
-    saveSplitImageBtn: null
-};
-
-// 创建模态框元素
-modalElements.singleImageModal = document.createElement('div');
-modalElements.singleImageModal.id = 'singleImageModal';
-modalElements.singleImageModal.className = 'modal';
-modalElements.singleImageModal.innerHTML = `
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>预览 - 长图导出</h3>
-            <div class="modal-actions">
-                <button id="copySingleImageBtn" class="btn secondary">复制图片</button>
-                <button id="saveSingleImageBtn" class="btn primary">保存图片</button>
-            </div>
-        </div>
-        <div class="modal-body image-preview-body">
-            <div id="singleImagePreview" class="image-preview"></div>
-        </div>
-    </div>
-`;
-
-modalElements.splitImageModal = document.createElement('div');
-modalElements.splitImageModal.id = 'splitImageModal';
-modalElements.splitImageModal.className = 'modal';
-modalElements.splitImageModal.innerHTML = `
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>预览 - 分屏切图</h3>
-            <div class="modal-actions">
-                <button id="copySplitImageBtn" class="btn secondary">复制图片</button>
-                <button id="saveSplitImageBtn" class="btn primary">保存图片</button>
-            </div>
-        </div>
-        <div class="modal-body image-preview-body">
-            <div id="splitImagePreview" class="image-preview"></div>
-        </div>
-    </div>
-`;
-
-// 添加到 body
-document.body.appendChild(modalElements.singleImageModal);
-document.body.appendChild(modalElements.splitImageModal);
-
-// 初始化模态框元素
-function initializeModalElements() {
-    // 获取所有模态框相关的元素
-    modalElements.singleImagePreview = document.getElementById('singleImagePreview');
-    modalElements.splitImagePreview = document.getElementById('splitImagePreview');
-    modalElements.copySingleImageBtn = document.getElementById('copySingleImageBtn');
-    modalElements.saveSingleImageBtn = document.getElementById('saveSingleImageBtn');
-    modalElements.copySplitImageBtn = document.getElementById('copySplitImageBtn');
-    modalElements.saveSplitImageBtn = document.getElementById('saveSplitImageBtn');
-
-    // 为图片添加跨域支持
-    const handleImageLoad = (img) => {
-        img.crossOrigin = 'anonymous';
-        img.setAttribute('data-original-src', img.src);
-        // 如果是相对路径，添加完整域名
-        if (img.src.startsWith('/')) {
-            img.src = window.location.origin + img.src;
-        }
-        // 添加时间戳防止缓存
-        img.src = img.src + (img.src.includes('?') ? '&' : '?') + 'timestamp=' + new Date().getTime();
-    };
-
-    // 处理所有图片元素
-    document.querySelectorAll('img').forEach(handleImageLoad);
-
-    // 添加错误处理
-    const handleImageError = (img) => {
-        console.error('图片加载失败:', img.src);
-        showToast('图片加载失败，请检查网络连接');
-    };
-
-    // 为所有图片添加错误处理
-    document.querySelectorAll('img').forEach(img => {
-        img.addEventListener('error', () => handleImageError(img));
-    });
-}
-
-// 在 DOM 加载完成后初始化
-document.addEventListener('DOMContentLoaded', initializeModalElements);
 
 // 存储清空前的内容
 let lastContent = {
@@ -185,15 +84,22 @@ function undo() {
 }
 
 // 更新按钮状态
-function updateButtonStates() {
+async function updateButtonStates() {
     // 更新清空按钮状态
     const hasContent = markdownInput.value.trim() !== '' || questionInput.value.trim() !== '';
     clearBtn.disabled = !hasContent;
     clearBtn.classList.toggle('disabled', !hasContent);
     
-    // 粘贴按钮始终启用
-    pasteBtn.disabled = false;
-    pasteBtn.classList.remove('disabled');
+    // 更新粘贴按钮状态
+    try {
+        const clipboardText = await navigator.clipboard.readText();
+        pasteBtn.disabled = !clipboardText;
+        pasteBtn.classList.toggle('disabled', !clipboardText);
+    } catch (err) {
+        // 如果无法访问剪贴板，则保持启用状态
+        pasteBtn.disabled = false;
+        pasteBtn.classList.remove('disabled');
+    }
 }
 
 // 点赞功能
@@ -377,9 +283,63 @@ function initializeFeatures() {
     }
 }
 
-// 在页面加载完成后初始化所有功能
+// 初始化所有事件监听
+function initializeEventListeners() {
+    // 主题切换
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    
+    // 清空和撤销
+    clearBtn.addEventListener('click', clearContent);
+    undoBtn.addEventListener('click', undo);
+    
+    // 复制和粘贴
+    pasteBtn.addEventListener('click', handlePaste);
+    copyTextBtn.addEventListener('click', () => {
+        const markdown = markdownInput.value.trim();
+        if (!markdown) {
+            showToast('没有可预览的文字');
+            return;
+        }
+        const plainText = markdownToPlainText(markdown);
+        showPreviewModal(plainText);
+    });
+    copyFinalBtn.addEventListener('click', () => {
+        copyText(previewText.value);
+    });
+    
+    // 模态框点击关闭
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal || e.target === previewText) {
+            hidePreviewModal();
+        }
+    });
+    
+    // 输入监听
+    markdownInput.addEventListener('input', () => {
+        saveToHistory();
+        saveToLocalStorage();
+        updateButtonStates();
+    });
+    
+    questionInput.addEventListener('input', () => {
+        saveToHistory();
+        saveToLocalStorage();
+        updateButtonStates();
+    });
+    
+    // 剪贴板变化监听
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            updateButtonStates();
+        }
+    });
+}
+
+// 在页面加载完成后初始化
 window.addEventListener('load', () => {
     initializeFeatures();
+    initializeEventListeners();
+    initTheme();
     
     const savedContent = localStorage.getItem('postify-content');
     if (savedContent) {
@@ -411,53 +371,10 @@ window.addEventListener('load', () => {
     updateButtonStates();
 });
 
-// 监听输入变化
-markdownInput.addEventListener('input', () => {
-    saveToHistory();
-    saveToLocalStorage();
-    updateButtonStates();
-});
-
-// 添加粘贴事件监听
-markdownInput.addEventListener('paste', (e) => {
-    // 保存当前状态到历史记录
-    saveToHistory();
-    
-    // 更新后自动保存并更新预览
-    setTimeout(() => {
-        saveToLocalStorage();
-        updatePreview();
-        updateButtonStates();
-        showToast('已粘贴内容');
-    }, 0);
-});
-
-questionInput.addEventListener('input', () => {
-    saveToHistory();
-    saveToLocalStorage();
-    updateButtonStates();
-});
-
-// 监听剪贴板变化
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        updateButtonStates();
-    }
-});
-
-// 事件监听
-themeToggleBtn.addEventListener('click', toggleTheme);
-clearBtn.addEventListener('click', clearContent);
-undoBtn.addEventListener('click', undo);
-pasteBtn.addEventListener('click', handlePaste);
-
-// 初始化主题
-initTheme();
-
-// 修改AI助手配置
+// AI助手配置
 const AI_ASSISTANTS = {
     postify: {
-        name: 'Postify.cc',
+        name: 'Postify: From AI to Social',
         logo: 'assets/logos/postify.png'
     },
     kimi: {
@@ -477,26 +394,6 @@ const AI_ASSISTANTS = {
         logo: 'assets/logos/yuanbao.png'
     }
 };
-
-// 在生成图片时获取 AI 助手信息的安全方法
-function getAIAssistantInfo() {
-    if (!AI_ASSISTANTS[currentAI]) {
-        console.warn(`未找到 ${currentAI} 的配置信息，使用默认值`);
-        return {
-            name: 'Postify.cc',
-            logo: 'assets/logos/postify.png'
-        };
-    }
-    return AI_ASSISTANTS[currentAI];
-}
-
-// 处理图片加载错误
-function handleLogoError(logoElement) {
-    console.warn('Logo 加载失败，使用默认样式');
-    logoElement.style.display = 'none';
-    logoElement.parentElement.style.background = '#f5f5f7';
-    logoElement.parentElement.textContent = 'AI';
-}
 
 // 当前选中的AI助手
 let currentAI = 'postify';
@@ -535,152 +432,222 @@ function showToast(message, duration = 2000) {
 
 // Markdown转纯文本
 function markdownToPlainText(markdown) {
-    // 预处理：标准化换行符
-    let text = markdown.replace(/\r\n/g, '\n');
+    if (!markdown) return '';
     
+    // 预处理：标准化换行符和空格，并清理所有markdown格式
+    let text = markdown.replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n')  // 预处理连续空行
+        .replace(/\t/g, '    ')      // 统一tab为空格
+        .replace(/\*\*([^*]+?)\*\*/g, '$1')  // 移除加粗标记
+        .replace(/\*([^*]+?)\*/g, '$1')      // 移除斜体标记
+        .replace(/`([^`]+?)`/g, '$1')        // 移除代码标记
+        .replace(/\[([^\]]+?)\]\([^)]+?\)/g, '$1')  // 移除链接标记
+        .replace(/\*\*/g, '')                // 清理任何剩余的**标记
+        .replace(/\*/g, '');                 // 清理任何剩余的*标记
+    
+    // 1. 移除分隔线
+    text = text.replace(/^---+$\n?/gm, '');
+    
+    // 2. 处理标题
     text = text
-        // 处理标题，保留原有冒号
-        .replace(/^#{1,6}\s+\*\*(.*?)\*\*[:：]?\s*$/gm, '$1')
-        .replace(/^#{1,6}\s+(.*?)[:：]?\s*$/gm, '$1')
+        .replace(/^#{1,6}\s+(\d+\.\s*)(.*?)$/gm, '$1$2')  // 处理带编号的标题
+        .replace(/^#{1,6}\s+(.*?)$/gm, '$1');             // 处理普通标题
+    
+    // 3. 按行处理文本
+    let lines = text.split('\n');
+    let processedLines = [];
+    let prevLineType = 'text';
+    let prevLineContent = '';
+    let inList = false;
+    let lastListLevel = 0;
+    let lastWasColon = false;
+    let inSameList = false;
+    let columnNames = [];  // 存储表头列名
+    let isFirstTableRow = true;  // 标记是否是表格的第一行数据
+    
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let trimmedLine = line.trim();
         
-        // 处理强调语法
-        .replace(/\*\*([^*]+)\*\*/g, '$1') // 移除加粗
-        .replace(/\*([^*]+)\*/g, '$1') // 移除斜体
-        .replace(/`([^`]+)`/g, '$1') // 移除代码
+        // 跳过空行
+        if (!trimmedLine) {
+            inList = false;
+            lastListLevel = 0;
+            lastWasColon = false;
+            inSameList = false;
+            continue;
+        }
         
-        // 处理链接
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        // 检测标题
+        if (trimmedLine.match(/^\d+\.\s+/) || trimmedLine.toLowerCase() === '总结') {
+            processedLines.push(trimmedLine);
+            prevLineType = 'title';
+            prevLineContent = trimmedLine;
+            inList = false;
+            lastListLevel = 0;
+            lastWasColon = false;
+            inSameList = false;
+            continue;
+        }
         
-        // 处理有序列表（包括嵌套）
-        .replace(/^(\s*)\d+\.\s+\*\*(.*?)\*\*\s*$/gm, (match, indent, content) => {
-            const num = match.match(/\d+/)[0];
-            return num + '.  ' + content;
-        })
-        .replace(/^(\s*)\d+\.\s+(.*?)$/gm, (match, indent, content) => {
-            const num = match.match(/\d+/)[0];
-            return num + '.  ' + content;
-        })
+        // 检测列表项
+        if (trimmedLine.match(/^[-*]\s/)) {
+            let indentLevel = line.match(/^\s*/)[0].length;
+            let content = trimmedLine.replace(/^[-*]\s+/, '').trim();
+            
+            content = content
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/`([^`]+)`/g, '$1');
+            
+            if (indentLevel >= 2) {
+                processedLines.push(`- ${content}`);
+                prevLineType = 'list2';
+                lastListLevel = 2;
+                inSameList = true;
+            } else {
+                processedLines.push(`• ${content}`);
+                prevLineType = 'list1';
+                lastListLevel = 1;
+                inList = true;
+                inSameList = true;
+            }
+            
+            prevLineContent = content;
+            lastWasColon = content.endsWith('：');
+            continue;
+        }
         
-        // 处理无序列表（包括嵌套）
-        .replace(/^(\s*)[-*+]\s+(.*?)$/gm, (match, indent, content) => {
-            return '•  ' + content;
-        })
+        // 处理表格
+        if (trimmedLine.startsWith('|')) {
+            let cells = trimmedLine
+                .split('|')
+                .filter(cell => cell.trim())
+                .map(cell => {
+                    return cell.trim()
+                        .replace(/\*\*([^*]+?)\*\*/g, '$1')
+                        .replace(/\*([^*]+?)\*/g, '$1')
+                        .replace(/`([^`]+?)`/g, '$1')
+                        .replace(/\[([^\]]+?)\]\([^)]+?\)/g, '$1')
+                        .replace(/\*\*/g, '')
+                        .replace(/\*/g, '')
+                        .trim();
+                });
+            
+            // 跳过分隔行
+            if (trimmedLine.match(/^\|[-:\s|]+\|$/)) {
+                continue;
+            }
+            
+            // 跳过表头行
+            if (cells[0].toLowerCase() === '名称' || cells[0].toLowerCase() === 'name') {
+                columnNames = cells.slice(1);  // 保存列名，供后续使用
+                isFirstTableRow = true;  // 重置表格行计数
+                continue;
+            }
+            
+            // 处理数据行
+            if (cells.length >= 2) {
+                // 如果不是第一行数据，添加空行
+                if (!isFirstTableRow) {
+                    processedLines.push('');
+                }
+                
+                // 计算当前表格内的序号
+                let titleNumber = isFirstTableRow ? 1 : 2;
+                isFirstTableRow = false;
+                
+                // 提取内容
+                let content = cells[0];
+                
+                // 添加标题行（带序号）
+                processedLines.push(`${titleNumber}. ${content}`);
+                
+                // 添加其他列作为列表项
+                for (let i = 1; i < cells.length; i++) {
+                    if (cells[i].trim()) {
+                        let prefix = columnNames[i-1] ? `${columnNames[i-1]}：` : '';
+                        processedLines.push(`• ${prefix}${cells[i].trim()}`);
+                    }
+                }
+                
+                prevLineType = 'table';
+                lastWasColon = false;
+                inSameList = false;
+            }
+            continue;
+        }
         
-        // 处理缩进的非列表项
-        .replace(/^(\s+)([^•\d].*?)$/gm, (match, indent, content) => {
-            if (!content.trim()) return '';
-            return content;
-        })
+        // 处理其他文本
+        let processedLine = trimmedLine
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/`([^`]+)`/g, '$1')
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+            .replace(/^\s*>\s*(.*)$/g, '$1');
         
-        // 清理空白行和格式化段落
-        .replace(/\n{2,}/g, '\n') // 先将所有多行变成单行
-        .replace(/^\s+|\s+$/gm, '') // 清理每行首尾空白
-        
-        // 特殊处理冒号和标题
-        .replace(/([^：])：(?!\n)/g, '$1：\n') // 确保冒号后有换行（但不处理已有换行的情况）
-        .replace(/：\n\s*\n/g, '：\n') // 删除冒号后的多余空行
-        .replace(/^(讨论.*?)：$/gm, '$1：') // 特殊处理"讨论"开头的标题
-        
-        // 处理列表项的格式和间距
-        .replace(/^(\d+\.)\s*/gm, '$1  ') // 确保数字后有两个空格
-        .replace(/^•\s*/gm, '•  ') // 确保圆点后有两个空格
-        
-        // 最终清理和格式化
-        .replace(/^[\s\u200B]+|[\s\u200B]+$/g, '') // 清理整个文本的首尾空白
-        .replace(/\n{3,}/g, '\n') // 先将多个空行压缩为单行
-        
-        // 处理特殊段落格式
-        .replace(/讨论方向：\n+/g, '讨论方向：\n') // 确保"讨论方向："后只有一个换行
-        .replace(/讨论背景：\n+/g, '讨论背景：\n') // 确保"讨论背景："后只有一个换行
-        
-        // 处理段落和列表的间距
-        .replace(/([^：\n])\n([^1-5•\n])/g, '$1\n$2') // 调整非列表段落之间的换行
-        .replace(/([^：\n])\n+([1-5]\.|•)/g, '$1\n$2') // 移除段落和列表之间的多余空行
-        .replace(/(\d+\.  .*)\n(?=\d+\.)/g, '$1\n') // 确保有序列表项之间没有空行
-        .replace(/(•  .*)\n(?=•)/g, '$1\n') // 确保无序列表项之间没有空行
-        
-        // 最后的格式微调
-        .replace(/^(.+)：$/gm, '$1：') // 确保冒号结尾的行没有换行
-        .replace(/：\n\n+/g, '：\n') // 确保冒号后没有多余空行
-        .replace(/(\d+\.  .*)\n\n+(?=[^1-5•])/g, '$1\n') // 移除列表项后的多余空行
-        .replace(/(•  .*)\n\n+(?=[^1-5•])/g, '$1\n') // 移除无序列表项后的多余空行
-        .replace(/\n{2,}$/g, '\n'); // 清理文本末尾的多余换行
-
+        processedLines.push(processedLine);
+        prevLineType = 'text';
+        prevLineContent = processedLine;
+        inList = false;
+        lastListLevel = 0;
+        lastWasColon = processedLine.endsWith('：');
+        inSameList = false;
+    }
+    
+    // 4. 最终处理
+    text = processedLines.join('\n')
+        .replace(/\n+/g, '\n')  // 移除所有空行
+        .replace(/([^：])(：)\s*\n+(?!$)/g, '$1$2\n')
+        .trim();
+    
+    // 不在这里添加水印，而是在复制时添加
     return text;
 }
 
-// 测试用例
-const testInput = `结合AIPPT、ChatDOC、ChatExcel和AirTable的特点和功能，可以构思以下讨论主题：
-
-### **讨论主题：AI工具在办公自动化与效率提升中的应用与挑战**
-
-#### **讨论背景：**
-随着AI技术的快速发展，办公场景中的自动化和智能化工具不断涌现。AIPPT、ChatDOC、ChatExcel和AirTable等工具分别在演示制作、文档处理、数据分析和项目管理中展现了强大的功能。这些工具不仅提高了工作效率，还改变了传统办公的模式。
-
-#### **讨论方向：**
-1. **AI工具的功能与应用场景**
-   - AIPPT、ChatDOC、ChatExcel和AirTable分别在哪些办公场景中表现出色？例如，ChatExcel通过自然语言交互帮助用户快速处理Excel表格。
-   - 这些工具如何帮助企业和个人提升工作效率和创造力？
-
-2. **AI工具的用户体验与易用性**
-   - ChatDOC和ChatExcel等工具的操作方式简单易上手，用户无需复杂的学习过程即可快速上手。
-   - 如何进一步优化这些工具的用户体验，使其更符合不同用户群体的需求？
-
-3. **数据安全与隐私保护**
-   - 在使用AI工具处理文档和数据时，数据安全和隐私保护是关键问题。例如，ChatDOC对用户数据进行加密存储，确保用户数据的安全。
-   - 企业和个人在使用这些工具时，应如何确保数据的合规性和安全性？
-
-4. **AI工具的局限性与挑战**
-   - 尽管AI工具在效率提升方面表现出色，但生成的内容可能存在质量参差不齐的问题，例如缺乏深度或创新性。
-   - 如何通过技术优化和人工干预，解决AI工具在内容质量和准确性方面的挑战？
-
-5. **未来展望：AI工具的融合与创新**
-   - 随着AI技术的不断发展，未来这些工具可能会实现更深度的融合。例如，将ChatExcel的数据分析功能与AIPPT的演示制作功能结合，为用户提供更全面的解决方案。
-   - 企业和开发者如何通过技术创新，推动AI工具在更多场景中的应用？
-
-通过以上讨论方向，可以深入探讨AI工具在办公自动化中的应用价值、用户体验、数据安全以及未来发展方向，为AI技术在办公场景中的进一步发展提供有价值的见解。`;
-
-// 运行测试
-console.log("转换结果：");
-console.log("-------------------");
-console.log(markdownToPlainText(testInput));
-
-// 添加水印到内容
-function addWatermark(container) {
-    const watermark = document.createElement('div');
-    watermark.className = 'watermark';
-    watermark.innerHTML = `
-        <img src="assets/logos/postify.png" alt="Postify">
-        <span>Postify.cc - 超好用的AI助手对话分享工具</span>
-    `;
-    container.appendChild(watermark);
-}
-
-// 修改复制文本函数
+// 复制到剪贴板功能
 async function copyText(text) {
     try {
-        const watermark = '\n\nPostify.cc - 超好用的AI助手对话分享工具';
-        let finalText = '';
+        // 获取问题内容
         const question = questionInput.value.trim();
         
+        // 构建完整文本
+        let fullText = text;
         if (question) {
-            finalText = `问题：${question}\n回答：\n${text}${watermark}`;
-        } else {
-            finalText = text + watermark;
+            fullText = `问题：${question}\n回答：\n${text}`;
         }
         
-        await navigator.clipboard.writeText(finalText);
+        // 添加水印
+        const textWithWatermark = fullText + '\n\nPostify.cc - 超好用的AI对话分享工具';
+        await navigator.clipboard.writeText(textWithWatermark);
         showToast('已复制到剪贴板');
+        // 移除选中效果
         window.getSelection().removeAllRanges();
     } catch (err) {
-        console.error('Copy failed:', err);
-        showToast('复制失败，请重试');
+        // 如果剪贴板API不可用，使用传统方法
+        const question = questionInput.value.trim();
+        let fullText = text;
+        if (question) {
+            fullText = `问题：${question}\n回答：\n${text}`;
+        }
+        
+        previewText.value = fullText + '\n\nPostify.cc - 超好用的AI对话分享工具';
+        previewText.select();
+        document.execCommand('copy');
+        // 恢复原始预览内容
+        previewText.value = text;
+        // 移除选中效果
+        window.getSelection().removeAllRanges();
+        previewText.blur();
+        showToast('已复制到剪贴板');
     }
 }
 
 // 显示预览模态框
 function showPreviewModal(text) {
-    previewText.value = text;
+    // 移除水印后显示在预览框中
+    const textWithoutWatermark = text.replace(/\n\nPostify\.cc - 超好用的AI对话分享工具$/, '');
+    previewText.value = textWithoutWatermark;
     previewModal.style.display = 'block';
     
     // 设置文本框样式，允许选择
@@ -713,328 +680,176 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     }
 });
 
-// 修改临时容器创建函数
-function createOffscreenContainer(width) {
-    // 创建一个独立的离屏容器
-    const offscreenContainer = document.createElement('div');
-    const uniqueId = `temp-container-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // 设置严格的样式隔离
-    offscreenContainer.style.cssText = `
-        position: fixed !important;
-        left: -9999px !important;
-        top: -9999px !important;
-        width: ${width}px !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        overflow: hidden !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        z-index: -9999 !important;
-        transform: translateZ(0) !important;
-        contain: strict !important;
-        isolation: isolate !important;
-        display: block !important;
-    `;
-
-    // 创建实际的内容容器
-    const container = document.createElement('div');
-    container.id = uniqueId;
-    container.style.cssText = `
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        transform: none !important;
-        contain: strict !important;
-        isolation: isolate !important;
-    `;
-    
-    offscreenContainer.appendChild(container);
-    document.body.appendChild(offscreenContainer);
-
-    return {
-        container,
-        cleanup: () => {
-            if (document.body.contains(offscreenContainer)) {
-                document.body.removeChild(offscreenContainer);
-            }
-        }
-    };
+// 添加设备检测函数
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// 修改清理临时容器函数
-function cleanupTemporaryContainers() {
-    // 清理所有临时容器
-    const tempContainers = document.querySelectorAll('[id^="temp-container-"]');
-    tempContainers.forEach(container => {
-        const parentContainer = container.parentElement;
-        if (parentContainer && document.body.contains(parentContainer)) {
-            document.body.removeChild(parentContainer);
-        }
-    });
-}
-
-// 添加错误检查和日志记录函数
-function logError(error, context) {
-    console.error(`[${context}] 错误:`, error);
-    console.error('错误堆栈:', error.stack);
-    
-    // 根据错误类型返回用户友好的错误消息
-    let userMessage = '操作失败，请重试';
-    
-    if (error.message.includes('canvas')) {
-        if (error.message.includes('tainted')) {
-            userMessage = '图片加载失败，请检查图片来源是否支持跨域访问';
-        } else {
-            userMessage = '图片处理失败，请检查图片格式是否正确';
-        }
-    } else if (error.message.includes('split')) {
-        userMessage = '分屏处理失败，请检查内容格式';
-    } else if (error.message.includes('initialization')) {
-        userMessage = '初始化失败，请刷新页面重试';
-    }
-    
-    showToast(userMessage);
-}
-
-// 修改生成图片函数的错误处理
+// 生成长图片
 async function generateImage() {
-    cleanupTemporaryContainers();
-    let tempContainer = null;
-    
     try {
-        console.log('开始生成长图...');
         const markdown = markdownInput.value.trim();
         if (!markdown) {
-            throw new Error('empty_content');
+            showToast('没有可预览的内容');
+            return;
         }
 
-        showToast('正在生成长图...');
+        showToast('正在生成图片...');
+        console.log('开始生成图片...');
         
-        // 验证必要的元素是否存在
-        if (!modalElements.singleImagePreview) {
-            throw new Error('initialization_failed');
-        }
-
-        const containerWidth = 375;
-        console.log('创建临时容器...');
-        const { container, cleanup } = createOffscreenContainer(containerWidth);
-        tempContainer = container;
-        if (!tempContainer) {
-            throw new Error('temp_container_failed');
-        }
-
-        // 记录关键步骤
-        console.log('准备渲染内容...');
         const isDark = isDarkMode();
         const fontSize = 16;
-        const contentPadding = 20;
-        const headerHeight = 65;
 
-        // 创建实际内容容器
-        console.log('创建内容容器...');
-        const contentWrapper = document.createElement('div');
-        contentWrapper.style.cssText = `
-            width: 100%;
-            background: ${isDark ? '#1a1a1a' : 'white'};
-            border-radius: 16px;
-            overflow: visible;
-            opacity: 1;
-            visibility: visible;
-        `;
-        tempContainer.appendChild(contentWrapper);
-
-        // 添加基础样式
-        const baseStyle = document.createElement('style');
-        baseStyle.textContent = `
-            h1, h2, h3, h4, h5, h6 { 
-                margin: 16px 0 12px;
-                font-weight: 600;
-                line-height: 1.3;
-                color: ${isDark ? '#e0e0e0' : '#333333'};
+        // 创建样式表
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            .export-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 375px;
+                min-height: 100px;
+                background: ${isDark ? '#1a1a1a' : 'white'};
+                font-family: -apple-system, system-ui, sans-serif;
+                line-height: 1.8;
+                border-radius: 16px;
+                overflow: visible;
+                font-size: ${fontSize}px;
             }
-            h1 { font-size: ${fontSize * 1.4}px; }
-            h2 { font-size: ${fontSize * 1.3}px; }
-            h3 { font-size: ${fontSize * 1.2}px; }
-            h4, h5, h6 { font-size: ${fontSize * 1.1}px; }
-            
-            p { 
-                margin: 8px 0;
-                line-height: 1.6;
-                text-align: justify;
-                color: ${isDark ? '#e0e0e0' : '#333333'};
+            .export-container * {
+                box-sizing: border-box;
             }
-            
-            ul, ol { 
-                padding-left: 1.5em;
-                margin: 8px 0;
-                color: ${isDark ? '#e0e0e0' : '#333333'};
-            }
-            
-            li { 
-                margin: 4px 0;
-                line-height: 1.6;
-            }
-            
-            li > ul, li > ol {
-                margin: 4px 0;
-            }
-            
-            pre {
-                margin: 12px 0;
+            .export-header {
+                display: flex;
+                align-items: center;
                 padding: 12px;
-                background: ${isDark ? '#2a2a2a' : '#f5f5f7'};
+                background: ${isDark ? '#1a1a1a' : 'white'};
+                border-bottom: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'};
+                min-height: 48px;
+                width: 100%;
+            }
+            .export-content {
+                padding: 12px;
+                background: ${isDark ? '#1a1a1a' : 'white'};
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+                font-size: ${fontSize}px;
+                line-height: 1.8;
+                width: 100%;
+                min-height: 50px;
+            }
+            .export-content h1, 
+            .export-content h2, 
+            .export-content h3, 
+            .export-content h4, 
+            .export-content h5, 
+            .export-content h6 {
+                margin: 20px 0 10px;
+                font-weight: 600;
+                color: ${isDark ? '#e0e0e0' : '#1a1a1a'};
+                font-size: ${fontSize * 1.2}px;
+                line-height: 1.4;
+            }
+            .export-content p {
+                margin: 10px 0;
+                line-height: 1.8;
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+            }
+            .export-content ul,
+            .export-content ol {
+                padding-left: 20px;
+                margin: 10px 0;
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+            }
+            .export-content li {
+                margin: 8px 0;
+            }
+            .export-content code {
+                background: ${isDark ? '#333333' : '#f5f5f7'};
+                color: ${isDark ? '#e0e0e0' : '#1a1a1a'};
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: ${fontSize * 0.9}px;
+                font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+            }
+            .export-content pre {
+                background: ${isDark ? '#333333' : '#f5f5f7'};
+                padding: 12px;
                 border-radius: 8px;
                 overflow-x: auto;
             }
-            
-            code {
-                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-                font-size: ${fontSize * 0.9}px;
-                background: ${isDark ? '#333333' : '#f5f5f7'};
-                padding: 2px 4px;
-                border-radius: 4px;
-                color: ${isDark ? '#e0e0e0' : '#333333'};
-            }
-            
-            pre code {
+            .export-content pre code {
                 background: none;
                 padding: 0;
+                border-radius: 0;
             }
-            
-            blockquote {
-                margin: 12px 0;
-                padding: 0 12px;
+            .export-content blockquote {
+                margin: 10px 0;
+                padding-left: 12px;
+                border-left: 4px solid ${isDark ? '#333333' : '#f5f5f7'};
                 color: ${isDark ? '#a0a0a0' : '#666666'};
-                border-left: 4px solid ${isDark ? '#404040' : '#e8e8e8'};
-                font-style: italic;
-            }
-            
-            img {
-                max-width: 100%;
-                border-radius: 8px;
-                margin: 12px 0;
-            }
-            
-            hr {
-                border: none;
-                height: 1px;
-                background: ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e8e8e8'};
-                margin: 16px 0;
-            }
-            
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 12px 0;
-                font-size: ${fontSize}px;
-                background: ${isDark ? '#2a2a2a' : '#f5f5f7'};
-                border-radius: 8px;
-                overflow: hidden;
-            }
-            
-            th, td {
-                padding: 8px 12px;
-                text-align: left;
-                border: 1px solid ${isDark ? '#404040' : '#e8e8e8'};
-                color: ${isDark ? '#e0e0e0' : '#333333'};
-            }
-            
-            th {
-                background: ${isDark ? '#333333' : '#ecedf0'};
-                font-weight: 600;
-                white-space: nowrap;
-            }
-            
-            tr:hover td {
-                background: ${isDark ? '#333333' : '#ecedf0'};
-            }
-            
-            *:first-child {
-                margin-top: 0;
-            }
-            
-            *:last-child {
-                margin-bottom: ${contentPadding}px;
-            }
-
-            .question-text {
-                text-indent: 0 !important;
             }
         `;
-        contentWrapper.appendChild(baseStyle);
+        document.head.appendChild(styleSheet);
+        
+        // 创建包装容器
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            width: 375px;
+            height: auto;
+            overflow: visible;
+        `;
+        document.body.appendChild(wrapper);
+        
+        // 创建主容器
+        const container = document.createElement('div');
+        container.className = 'export-container';
+        wrapper.appendChild(container);
 
         // 创建头部
         const header = document.createElement('div');
-        header.style.cssText = `
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: ${isDark ? '#1a1a1a' : 'white'};
-            border-bottom: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'};
-            height: ${headerHeight}px;
-            box-shadow: 0 1px 0 ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
-        `;
+        header.className = 'export-header';
 
-        const logoWrapper = document.createElement('div');
-        logoWrapper.style.cssText = `
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            flex-shrink: 0;
-            border-radius: 8px;
-            background: ${isDark ? '#2a2a2a' : '#f5f5f7'};
-            overflow: hidden;
-            box-sizing: border-box;
-            padding: 4px;
-        `;
+        // 添加选中的AI助手图标并预加载
+        const logo = new Image();
+        await new Promise((resolve, reject) => {
+            logo.onload = resolve;
+            logo.onerror = reject;
+            logo.src = AI_ASSISTANTS[currentAI].logo;
+            logo.style.cssText = `
+                width: 32px;
+                height: 32px;
+                margin-right: 12px;
+                border-radius: 8px;
+                flex-shrink: 0;
+            `;
+        }).catch(err => {
+            console.warn('Logo加载失败，继续使用占位图');
+        });
 
-        const logo = document.createElement('img');
-        logo.src = getAIAssistantInfo().logo;
-        logo.crossOrigin = 'anonymous';
-        logo.onerror = () => handleLogoError(logo);
-        logo.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            border-radius: 4px;
-        `;
-
+        header.appendChild(logo);
+        
+        // 添加标题
         const title = document.createElement('span');
-        title.textContent = getAIAssistantInfo().name;
+        title.textContent = AI_ASSISTANTS[currentAI].name;
         title.style.cssText = `
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             color: ${isDark ? '#e0e0e0' : '#000000'};
-            white-space: nowrap;
+            flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
-            line-height: 40px;
+            white-space: nowrap;
         `;
-
-        logoWrapper.appendChild(logo);
-        header.appendChild(logoWrapper);
+        
         header.appendChild(title);
-        contentWrapper.appendChild(header);
+        container.appendChild(header);
 
         // 创建内容区域
-        const contentContainer = document.createElement('div');
-        contentContainer.style.cssText = `
-            padding: ${contentPadding}px;
-            background: ${isDark ? '#1a1a1a' : 'white'};
-            color: ${isDark ? '#e0e0e0' : '#333333'};
-            font-size: ${fontSize}px;
-            line-height: 1.8;
-        `;
+        const content = document.createElement('div');
+        content.className = 'export-content';
 
         // 添加问题（如果有）
         const question = questionInput.value.trim();
@@ -1043,9 +858,10 @@ async function generateImage() {
             questionDiv.style.cssText = `
                 display: flex;
                 align-items: flex-start;
-                margin-bottom: 20px;
+                margin-bottom: 12px;
             `;
 
+            // 添加用户头像
             const avatar = document.createElement('div');
             avatar.style.cssText = `
                 width: 32px;
@@ -1057,14 +873,14 @@ async function generateImage() {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 14px;
+                font-size: ${fontSize * 0.9}px;
                 color: ${isDark ? '#a0a0a0' : '#666666'};
                 font-weight: 500;
             `;
             avatar.textContent = '我';
 
+            // 添加问题文本
             const questionText = document.createElement('div');
-            questionText.className = 'question-text';
             questionText.style.cssText = `
                 flex: 1;
                 font-size: ${fontSize}px;
@@ -1076,140 +892,342 @@ async function generateImage() {
 
             questionDiv.appendChild(avatar);
             questionDiv.appendChild(questionText);
-            contentContainer.appendChild(questionDiv);
+            content.appendChild(questionDiv);
 
+            // 添加分隔线
             const divider = document.createElement('div');
             divider.style.cssText = `
                 width: 100%;
                 height: 1px;
                 background: ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'};
-                margin: 20px 0;
+                margin: 12px 0;
             `;
-            contentContainer.appendChild(divider);
+            content.appendChild(divider);
+        }
+        
+        // 将Markdown转换为HTML
+        const html = marked.parse(markdown);
+        content.innerHTML += html;
+        
+        container.appendChild(content);
+
+        // 等待所有图片加载完成
+        const images = content.getElementsByTagName('img');
+        if (images.length > 0) {
+            await Promise.all(Array.from(images).map(img => {
+                return new Promise((resolve) => {
+                    if (img.complete) {
+                        resolve();
+                    } else {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    }
+                });
+            }));
         }
 
-        // 将Markdown转换为HTML并添加到内容容器
-        const htmlContent = marked.parse(markdown);
-        const contentDiv = document.createElement('div');
-        contentDiv.innerHTML = htmlContent;
-        contentDiv.style.cssText = `
-            color: ${isDark ? '#e0e0e0' : '#333333'};
-        `;
-        contentContainer.appendChild(contentDiv);
-        contentWrapper.appendChild(contentContainer);
+        // 等待字体和样式加载
+        await document.fonts.ready;
+        
+        // 等待DOM更新和布局计算
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // 在内容容器最后添加水印
-        addWatermark(contentContainer);
+        // 获取实际内容高度并设置容器高度
+        const contentHeight = content.offsetHeight;
+        const headerHeight = header.offsetHeight;
+        const totalHeight = contentHeight + headerHeight;
+        
+        console.log('容器尺寸:', {
+            width: container.offsetWidth,
+            height: totalHeight,
+            contentHeight,
+            headerHeight
+        });
 
-        // 等待内容渲染
-        console.log('等待内容渲染...');
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // 确保容器有正确的尺寸
+        container.style.height = `${totalHeight}px`;
+        wrapper.style.height = `${totalHeight}px`;
 
-        // 使用html2canvas生成图片
-        console.log('开始生成图片...');
-        const canvas = await html2canvas(contentWrapper, {
+        // 确保html2canvas选项正确设置
+        const canvasOptions = {
             scale: 2,
             useCORS: true,
             allowTaint: true,
             backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
             logging: true,
-            onclone: function(clonedDoc) {
-                console.log('克隆DOM完成');
-                const clonedWrapper = clonedDoc.querySelector('div');
-                if (!clonedWrapper) {
-                    console.error('未找到克隆的容器元素');
-                    return;
+            width: 375,
+            height: totalHeight,
+            windowWidth: 375,
+            windowHeight: totalHeight,
+            foreignObjectRendering: true,
+            onclone: (clonedDoc) => {
+                const clonedContainer = clonedDoc.querySelector('.export-container');
+                if (clonedContainer) {
+                    clonedContainer.style.position = 'relative';
+                    clonedContainer.style.left = '0';
+                    clonedContainer.style.opacity = '1';
+                    clonedContainer.style.height = `${totalHeight}px`;
+                    
+                    // 确保所有子元素可见
+                    Array.from(clonedContainer.getElementsByTagName('*')).forEach(el => {
+                        el.style.opacity = '1';
+                        if (el.tagName.toLowerCase() === 'img') {
+                            el.style.display = 'inline-block';
+                            el.style.maxWidth = '100%';
+                            el.style.height = 'auto';
+                        }
+                    });
                 }
-                clonedWrapper.style.position = 'static';
-                clonedWrapper.style.left = '0';
-                clonedWrapper.style.top = '0';
-                clonedWrapper.style.transform = 'none';
-                clonedWrapper.style.visibility = 'visible';
-                clonedWrapper.style.opacity = '1';
             }
-        }).catch(err => {
-            console.error('html2canvas生成失败:', err);
-            throw new Error(`图片生成失败: ${err.message}`);
-        });
+        };
 
-        // 生成图片数据
-        console.log('转换为图片数据...');
-        const image = canvas.toDataURL('image/png');
-        if (!image || image === 'data:,') {
-            throw new Error('图片数据生成失败');
+        // 使用try-catch包装html2canvas调用
+        let canvas;
+        try {
+            canvas = await html2canvas(container, canvasOptions);
+            
+            // 验证canvas尺寸
+            if (canvas.width === 0 || canvas.height === 0) {
+                throw new Error(`Canvas尺寸无效: ${canvas.width}x${canvas.height}`);
+            }
+            
+            console.log('Canvas生成成功，尺寸:', {
+                width: canvas.width,
+                height: canvas.height
+            });
+            
+            // 验证canvas内容
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+            
+            // 检查是否所有像素都是透明的
+            const hasContent = pixels.some((value, index) => {
+                return index % 4 === 3 && value !== 0;
+            });
+            
+            if (!hasContent) {
+                throw new Error('Canvas渲染内容为空');
+            }
+        } catch (canvasError) {
+            console.error('Canvas生成失败:', canvasError);
+            throw new Error('Canvas生成失败: ' + canvasError.message);
         }
+
+        // 验证canvas是否正确生成
+        if (!canvas || !canvas.getContext) {
+            throw new Error('Canvas对象无效');
+        }
+
+        console.log('开始转换为图片数据...');
         
-        // 更新数据集
-        console.log('更新预览数据...');
-        imagePreview.dataset.imageData = image;
+        // 使用try-catch包装toDataURL调用
+        let imageData;
+        try {
+            imageData = canvas.toDataURL('image/png', 1.0);
+            console.log('图片数据生成成功，数据长度:', imageData.length);
+        } catch (dataUrlError) {
+            console.error('转换为DataURL失败:', dataUrlError);
+            throw new Error('图片数据生成失败: ' + dataUrlError.message);
+        }
+
+        // 详细验证图片数据
+        if (!imageData) {
+            throw new Error('图片数据为空');
+        }
+
+        if (typeof imageData !== 'string') {
+            throw new Error(`图片数据类型错误: ${typeof imageData}`);
+        }
+
+        if (!imageData.startsWith('data:image/png;base64,')) {
+            console.error('图片数据格式:', imageData.substring(0, 50));
+            throw new Error('图片数据格式无效');
+        }
+
+        // 验证base64数据的有效性
+        const base64Data = imageData.split(',')[1];
+        if (!base64Data || base64Data.length === 0) {
+            throw new Error('Base64数据无效');
+        }
+
+        console.log('图片数据验证通过');
+        
+        // 更新预览
+        imagePreview.dataset.imageData = imageData;
         imagePreview.dataset.isSplitView = 'false';
-        
-        // 显示预览
-        console.log('显示预览...');
-        showImagePreview(image);
+        await showImagePreview(imageData);
         
     } catch (error) {
-        let errorMessage = '生成失败';
-        
-        switch(error.message) {
-            case 'empty_content':
-                errorMessage = '没有可预览的内容';
-                break;
-            case 'initialization_failed':
-                errorMessage = '初始化失败，请刷新页面重试';
-                break;
-            case 'temp_container_failed':
-                errorMessage = '临时容器创建失败，请刷新页面重试';
-                break;
-            default:
-                if (error.message.includes('tainted')) {
-                    errorMessage = '图片加载失败，请检查图片来源';
-                } else if (error.message.includes('canvas')) {
-                    errorMessage = '图片处理失败，请检查内容格式';
-                }
-        }
-        
-        logError(error, 'generateImage');
-        showToast(errorMessage);
-        
+        console.error('生成图片失败:', error);
+        showToast(`生成失败: ${error.message}`);
     } finally {
-        // 清理临时容器
-        console.log('清理临时资源...');
-        if (tempContainer && tempContainer.cleanup) {
-            tempContainer.cleanup();
-        }
-        cleanupTemporaryContainers();
-        
-        // 确保主界面按钮恢复正常
-        requestAnimationFrame(() => {
-            cleanupTemporaryContainers();
+        // 清理临时元素
+        const containers = document.querySelectorAll('div[style*="left: -9999px"]');
+        containers.forEach(container => {
+            if (container && container.parentNode) {
+                container.parentNode.removeChild(container);
+            }
         });
+        // 移除临时样式表
+        if (styleSheet && styleSheet.parentNode) {
+            styleSheet.parentNode.removeChild(styleSheet);
+        }
     }
 }
 
 // 显示图片预览
-function showImagePreview(imageData) {
-    const img = document.createElement('img');
-    img.src = imageData;
-    img.alt = "预览图片";
-    
-    // 添加双击事件
-    let lastClick = 0;
-    const doubleClickDelay = 300; // 双击判定时间间隔
-    
-    img.addEventListener('click', (e) => {
-        const currentTime = new Date().getTime();
-        if (currentTime - lastClick < doubleClickDelay) {
-            // 双击事件
-            hideImagePreviewModal();
+async function showImagePreview(imageData) {
+    return new Promise((resolve, reject) => {
+        console.log('开始验证图片数据...');
+        
+        // 基础验证
+        if (!imageData) {
+            console.error('图片数据为空');
+            showToast('图片数据为空，请重新生成');
+            reject(new Error('图片数据为空'));
+            return;
         }
-        lastClick = currentTime;
-        e.stopPropagation(); // 阻止事件冒泡
+
+        if (typeof imageData !== 'string') {
+            console.error('图片数据类型错误:', typeof imageData);
+            showToast('图片数据类型错误，请重新生成');
+            reject(new Error('图片数据类型错误'));
+            return;
+        }
+
+        // 详细的格式验证
+        if (!imageData.startsWith('data:image/png;base64,')) {
+            console.error('图片数据格式无效，实际格式:', imageData.substring(0, 50));
+            showToast('图片数据格式无效，请重新生成');
+            reject(new Error('图片数据格式无效'));
+            return;
+        }
+
+        console.log('图片数据验证通过，开始加载图片...');
+
+        // 重置预览容器样式
+        imagePreview.style.cssText = `
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--preview-bg);
+            border-radius: 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 12px;
+            -webkit-overflow-scrolling: touch;
+        `;
+
+        // 添加加载提示
+        const loadingDiv = document.createElement('div');
+        loadingDiv.textContent = '图片加载中...';
+        loadingDiv.style.cssText = `
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-align: center;
+        `;
+        imagePreview.innerHTML = '';
+        imagePreview.appendChild(loadingDiv);
+
+        const img = new Image();
+        
+        img.onload = () => {
+            try {
+                console.log('图片加载成功:', {
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                    aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(2)
+                });
+
+                imagePreview.innerHTML = '';
+                img.style.cssText = `
+                    max-width: 100%;
+                    width: auto;
+                    height: auto;
+                    display: block;
+                    margin: 0 auto;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDarkMode() ? '0.3' : '0.08'});
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
+                    -webkit-user-drag: none;
+                `;
+                imagePreview.appendChild(img);
+                showImagePreviewModal();
+                resolve();
+            } catch (err) {
+                console.error('显示预览失败:', err);
+                showToast('显示预览失败: ' + err.message);
+                reject(err);
+            }
+        };
+        
+        img.onerror = (error) => {
+            console.error('图片加载失败:', {
+                error,
+                dataLength: imageData.length,
+                dataStart: imageData.substring(0, 30) + '...'
+            });
+            imagePreview.innerHTML = `
+                <div style="
+                    color: var(--text-error);
+                    text-align: center;
+                    padding: 20px;
+                ">
+                    <div style="
+                        font-size: 16px;
+                        margin-bottom: 8px;
+                        color: var(--text-primary);
+                    ">图片加载失败</div>
+                    <div style="
+                        font-size: 14px;
+                        color: var(--text-secondary);
+                    ">请检查图片数据是否正确，或重新生成</div>
+                </div>
+            `;
+            showToast('图片加载失败，请重试');
+            reject(new Error('图片加载失败'));
+        };
+        
+        // 设置超时处理
+        const timeout = setTimeout(() => {
+            if (!img.complete) {
+                console.error('图片加载超时');
+                img.src = ''; // 取消加载
+                showToast('图片加载超时，请重试');
+                reject(new Error('图片加载超时'));
+            }
+        }, 30000); // 30秒超时
+
+        // 设置图片属性
+        img.alt = "预览图片";
+        
+        // 保存原始的onload处理函数
+        const originalOnload = img.onload;
+        const originalOnerror = img.onerror;
+        
+        // 设置新的事件处理函数
+        img.onload = function() {
+            clearTimeout(timeout);
+            if (originalOnload) {
+                originalOnload.apply(this, arguments);
+            }
+        };
+        
+        img.onerror = function() {
+            clearTimeout(timeout);
+            if (originalOnerror) {
+                originalOnerror.apply(this, arguments);
+            }
+        };
+        
+        img.src = imageData;  // 最后设置src触发加载
     });
-    
-    imagePreview.innerHTML = '';
-    imagePreview.appendChild(img);
-    imagePreviewModal.style.display = 'block';
 }
 
 // 辅助函数：复制图片数据到剪贴板
@@ -1286,7 +1304,7 @@ async function copyImageToClipboard() {
     }
 }
 
-// 修改保存图片函数
+// 保存图片到相册
 function saveImage() {
     try {
         const imageData = imagePreview.dataset.imageData;
@@ -1295,6 +1313,7 @@ function saveImage() {
             return;
         }
 
+        // 判断是否为分屏预览模式
         if (imagePreview.dataset.isSplitView === 'true') {
             try {
                 const images = JSON.parse(imageData);
@@ -1302,31 +1321,20 @@ function saveImage() {
                     showToast('未找到图片');
                     return;
                 }
-                
-                // 创建一个隐藏的下载链接列表
-                const downloadLinks = images.map((imgData, index) => {
+                // 保存所有分屏图片
+                images.forEach((imgData, index) => {
                     const link = document.createElement('a');
                     link.download = `${currentAI}-export-${index + 1}.png`;
                     link.href = imgData;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    return link;
+                    link.click();
                 });
-
-                // 依次触发下载
-                downloadLinks.forEach((link, index) => {
-                    setTimeout(() => {
-                        link.click();
-                        document.body.removeChild(link);
-                    }, index * 500); // 每500ms下载一张
-                });
-
-                showToast(`正在保存 ${images.length} 张图片`);
+                showToast(`已保存 ${images.length} 张图片`);
             } catch (err) {
-                console.error('Save split images failed:', err);
+                console.error('Parse split images failed:', err);
                 showToast('保存失败，请重试');
             }
         } else {
+            // 保存单张图片
             const link = document.createElement('a');
             link.download = `${currentAI}-export.png`;
             link.href = imageData;
@@ -1342,182 +1350,44 @@ function saveImage() {
 // 隐藏图片预览模态框
 function hideImagePreviewModal() {
     imagePreviewModal.style.display = 'none';
-    
-    // 清理所有临时容器
-    cleanupTemporaryContainers();
-    
-    // 重置预览容器
+    // 清理预览内容
     imagePreview.innerHTML = '';
-    imagePreview.style = '';
-    
-    // 确保主界面按钮恢复正常
-    requestAnimationFrame(() => {
-        cleanupTemporaryContainers();
+}
+
+// 显示图片预览模态框
+function showImagePreviewModal() {
+    imagePreviewModal.style.cssText = `
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        transform: translateZ(0);
+        isolation: isolate;
+    `;
+}
+
+// AI助手选择器事件监听
+document.querySelectorAll('.ai-option').forEach(option => {
+    option.addEventListener('click', () => {
+        // 移除其他选项的选中状态
+        document.querySelectorAll('.ai-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        // 添加当前选项的选中状态
+        option.classList.add('selected');
+        // 更新当前选中的AI助手
+        currentAI = option.dataset.ai;
+        // 保存到localStorage
+        saveToLocalStorage();
     });
-}
-
-// 安全地添加事件监听器的辅助函数
-function safeAddEventListener(elementId, eventType, handler) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.addEventListener(eventType, handler);
-        console.log(`Successfully bound ${eventType} event to ${elementId}`);
-    } else {
-        console.warn(`Element ${elementId} not found, skipping ${eventType} event binding`);
-    }
-}
-
-// 初始化所有事件监听器
-function initializeEventListeners() {
-    // 定义所有需要的事件绑定
-    const eventBindings = [
-        { id: 'copyTextBtn', event: 'click', handler: handleCopyText },
-        { id: 'splitImageBtn', event: 'click', handler: handleSplitImage },
-        { id: 'exportImageBtn', event: 'click', handler: handleExportImage },
-        { id: 'copyFinalBtn', event: 'click', handler: handleCopyFinal }
-    ];
-
-    // 安全地绑定每个事件
-    eventBindings.forEach(binding => {
-        safeAddEventListener(binding.id, binding.event, binding.handler);
-    });
-}
-
-// 等待 DOM 加载完成
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeEventListeners);
-} else {
-    // 如果 DOM 已经加载完成，直接初始化
-    initializeEventListeners();
-}
-
-// 修改原有的处理函数，添加安全检查
-function handleCopyText(e) {
-    e?.preventDefault();
-    const input = document.getElementById('markdownInput');
-    if (!input) {
-        console.error('Markdown input element not found');
-        showToast('无法找到输入框');
-        return;
-    }
-    // ... 原有的复制逻辑
-}
-
-function handleSplitImage(e) {
-    e?.preventDefault();
-    const input = document.getElementById('markdownInput');
-    if (!input) {
-        console.error('Markdown input element not found');
-        showToast('无法找到输入框');
-        return;
-    }
-    // ... 原有的分屏逻辑
-}
-
-function handleExportImage(e) {
-    e?.preventDefault();
-    const input = document.getElementById('markdownInput');
-    if (!input) {
-        console.error('Markdown input element not found');
-        showToast('无法找到输入框');
-        return;
-    }
-    // ... 原有的导出逻辑
-}
-
-function handleCopyFinal(e) {
-    e?.preventDefault();
-    const preview = document.getElementById('previewText');
-    if (!preview) {
-        console.error('Preview text element not found');
-        showToast('无法找到预览文本');
-        return;
-    }
-    // ... 原有的复制逻辑
-}
-
-// 通用的 Toast 提示函数
-function showToast(message, type = 'error') {
-    console.log(`[Toast] ${type}: ${message}`);
-    // 如果有专门的 toast 组件，在这里调用
-    alert(message); // 临时使用 alert 作为替代
-}
-
-async function handleSplitImage() {
-    cleanupTemporaryContainers(); // 确保开始前清理
-    try {
-        const markdownInput = document.getElementById('markdownInput');
-        if (!markdownInput) {
-            console.error('找不到输入框元素');
-            return;
-        }
-
-        const markdown = markdownInput.value.trim();
-        if (!markdown) {
-            showToast('没有可预览的内容');
-            return;
-        }
-
-        showToast('正在生成分屏图片...');
-        
-        // 添加日志
-        console.log('开始创建临时容器');
-        const { container, cleanup } = createOffscreenContainer(375);
-        if (!container) {
-            throw new Error('临时容器创建失败');
-        }
-
-        console.log('开始生成图片');
-        const images = await generateSplitImages(container);
-        if (!images || images.length === 0) {
-            throw new Error('图片生成失败');
-        }
-
-        showSplitImagePreview(images);
-    } catch (err) {
-        console.error('Split image failed:', err);
-        showToast('生成失败: ' + (err.message || '请重试'));
-    } finally {
-        cleanupTemporaryContainers();
-    }
-}
-
-// 添加事件监听器
-document.addEventListener('DOMContentLoaded', function() {
-    const splitImageBtn = document.getElementById('splitImageBtn');
-    if (splitImageBtn) {
-        splitImageBtn.addEventListener('click', handleSplitImage);
-    }
 });
 
-// 清空内容函数
-function clearContent() {
-    // 保存当前内容到历史记录
-    lastContent = {
-        question: questionInput.value,
-        markdown: markdownInput.value
-    };
-    
-    // 清空输入框
-    questionInput.value = '';
-    markdownInput.value = '';
-    
-    // 更新本地存储
-    saveToLocalStorage();
-    
-    // 更新按钮状态
-    updateButtonStates();
-    
-    // 添加已清空效果
-    clearBtn.classList.add('cleared');
-    setTimeout(() => {
-        clearBtn.classList.remove('cleared');
-    }, 1000);
-    
-    showToast('已清空内容');
-}
-
-// 保存到本地存储函数
+// 自动保存到localStorage
 function saveToLocalStorage() {
     try {
         const content = {
@@ -1530,3 +1400,706 @@ function saveToLocalStorage() {
         console.error('Save to localStorage failed:', err);
     }
 }
+
+// 修改清空功能
+function clearContent() {
+    if (!markdownInput.value && !questionInput.value && likeCount === 0) {
+        return; // 如果没有内容且点赞数为0，直接返回
+    }
+    
+    // 保存当前状态到历史记录
+    saveToHistory();
+    
+    // 清空输入区域
+    markdownInput.value = '';
+    questionInput.value = '';
+    
+    // 清空点赞数
+    likeCount = 0;
+    localStorage.setItem('postify-likes', '0');
+    updateLikeButtonState();
+    
+    // 更新预览
+    updatePreview();
+    showToast('已清空所有内容和点赞');
+    
+    // 保存到本地存储
+    saveToLocalStorage();
+    
+    // 更新按钮状态
+    updateButtonStates();
+}
+
+// 修改粘贴功能
+async function handlePaste() {
+    try {
+        // 首先检查是否支持 navigator.clipboard API
+        if (!navigator.clipboard) {
+            throw new Error('浏览器不支持剪贴板API');
+        }
+
+        // 请求剪贴板读取权限
+        let text;
+        try {
+            text = await navigator.clipboard.readText();
+        } catch (permissionError) {
+            // 如果是权限错误，给出明确提示
+            if (permissionError.name === 'NotAllowedError') {
+                showToast('请允许访问剪贴板权限', 3000);
+                return;
+            }
+            throw permissionError;
+        }
+
+        if (!text) {
+            showToast('剪切板为空');
+            return;
+        }
+        
+        // 保存当前状态到历史记录
+        saveToHistory();
+        
+        // 清空并粘贴新内容
+        markdownInput.value = text;
+        markdownInput.focus();
+        
+        // 保存到localStorage
+        saveToLocalStorage();
+        
+        // 更新预览
+        updatePreview();
+        
+        showToast('已粘贴内容');
+        
+        // 更新按钮状态
+        updateButtonStates();
+    } catch (err) {
+        console.error('Paste failed:', err);
+        // 提供更友好的错误提示
+        if (err.message.includes('剪贴板API')) {
+            showToast('当前浏览器不支持剪贴板功能，请使用快捷键(Ctrl+V)粘贴', 3000);
+        } else {
+            showToast('粘贴失败，请尝试使用快捷键(Ctrl+V)粘贴', 3000);
+        }
+    }
+}
+
+// 实时预览
+function updatePreview() {
+    const markdown = markdownInput.value;
+    const html = marked.parse(markdown);
+    previewContent.innerHTML = html;
+}
+
+// 修改 generateSplitImages 函数
+async function generateSplitImages() {
+    const markdown = markdownInput.value.trim();
+    if (!markdown) {
+        showToast('没有可预览的内容');
+        return;
+    }
+
+    const isDark = isDarkMode();
+    const isMobile = isMobileDevice();
+    
+    // 添加缺失的变量定义
+    const renderScale = isMobile ? 4 : 6; // 移动端4倍，桌面端6倍缩放
+    const maxCanvasHeight = 32767; // 浏览器canvas高度限制
+    const segmentHeight = Math.floor(maxCanvasHeight / renderScale); // 每段的最大高度
+    
+    // 根据设备类型设置尺寸
+    const containerWidth = isMobile ? 375 : 750;
+    const containerHeight = isMobile ? 600 : 1000;
+    const baseSize = containerWidth * 0.028 * 0.2;  // 缩小到原来的1/5
+    const baseFontSize = Math.min(baseSize * 0.9, isMobile ? 2.4 : 2.8);  // 限制最大字体
+    const headerFontSize = Math.min(baseSize * 1.2, isMobile ? 2.8 : 3.6);  // 限制标题字体
+    const logoSize = Math.min(baseSize * 2.4, isMobile ? 24 : 36);  // logo保持原来大小
+    const containerPadding = Math.min(baseSize * 1.6, isMobile ? 12 : 24);  // 保持原来内边距
+    
+    try {
+        // 创建临时容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            width: ${containerWidth}px;
+            background: ${isDark ? '#1a1a1a' : 'white'};
+            font-family: -apple-system, system-ui, "SF Pro SC", "SF Pro Text", "PingFang SC", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+            line-height: 1.2;
+            border-radius: ${isMobile ? 12 : 24}px;
+            overflow: visible;
+            font-size: ${baseFontSize}px;
+            opacity: 0;
+            pointer-events: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: pre-wrap;
+            letter-spacing: -0.2px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, ${isDark ? '0.3' : '0.08'});
+        `;
+        document.body.appendChild(container);
+
+        // 创建头部
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex;
+            align-items: center;
+            padding: ${containerPadding * 0.5}px ${containerPadding}px;
+            background: ${isDark ? '#1a1a1a' : 'white'};
+            border-bottom: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'};
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            min-height: ${logoSize + containerPadding}px;
+        `;
+
+        // 添加选中的AI助手图标
+        const logo = document.createElement('img');
+        logo.src = AI_ASSISTANTS[currentAI].logo;
+        logo.style.cssText = `
+            width: ${logoSize}px;
+            height: ${logoSize}px;
+            margin-right: ${containerPadding}px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        `;
+
+        // 添加标题
+        const title = document.createElement('span');
+        title.textContent = AI_ASSISTANTS[currentAI].name;
+        title.style.cssText = `
+            font-size: ${headerFontSize}px;
+            font-weight: 600;
+            color: ${isDark ? '#e0e0e0' : '#000000'};
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        `;
+
+        header.appendChild(logo);
+        header.appendChild(title);
+        container.appendChild(header);
+
+        // 创建内容区域
+        const content = document.createElement('div');
+        content.style.cssText = `
+            padding: ${containerPadding}px;
+            background: ${isDark ? '#1a1a1a' : 'white'};
+            color: ${isDark ? '#e0e0e0' : '#333333'};
+            font-size: ${baseFontSize}px;
+            line-height: 1.8;
+        `;
+
+        // 添加问题（如果有）
+        const question = questionInput.value.trim();
+        if (question) {
+            const questionDiv = document.createElement('div');
+            questionDiv.style.cssText = `
+                display: flex;
+                align-items: flex-start;
+                margin-bottom: ${containerPadding}px;
+            `;
+
+            // 添加用户头像
+            const avatar = document.createElement('div');
+            avatar.style.cssText = `
+                width: ${logoSize}px;
+                height: ${logoSize}px;
+                border-radius: 50%;
+                background: ${isDark ? '#333333' : '#f5f5f5'};
+                margin-right: ${containerPadding}px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${baseFontSize * 0.9}px;
+                color: ${isDark ? '#a0a0a0' : '#666666'};
+                font-weight: 500;
+            `;
+            avatar.textContent = '我';
+
+            // 添加问题文本
+            const questionText = document.createElement('div');
+            questionText.style.cssText = `
+                flex: 1;
+                font-size: ${baseFontSize}px;
+                line-height: 1.8;
+                padding-top: ${containerPadding * 0.2}px;
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+            `;
+            questionText.textContent = question;
+
+            questionDiv.appendChild(avatar);
+            questionDiv.appendChild(questionText);
+            content.appendChild(questionDiv);
+
+            // 添加分隔线
+            const divider = document.createElement('div');
+            divider.style.cssText = `
+                width: 100%;
+                height: 1px;
+                background: ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'};
+                margin: ${containerPadding}px 0;
+            `;
+            content.appendChild(divider);
+        }
+        
+        // 将Markdown转换为HTML
+        const html = marked.parse(markdown);
+        content.innerHTML += html;
+
+        // 自定义样式
+        const style = document.createElement('style');
+        style.textContent = `
+            h1, h2, h3, h4, h5, h6 { 
+                margin: 20px 0 10px; 
+                font-weight: 600;
+                color: ${isDark ? '#e0e0e0' : '#1a1a1a'};
+                font-size: ${baseFontSize * 1.2}px;
+            }
+            p { 
+                margin: 10px 0; 
+                line-height: 1.8;
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+                font-size: ${baseFontSize}px;
+            }
+            ul, ol { 
+                padding-left: 20px; 
+                margin: 10px 0;
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+                font-size: ${baseFontSize}px;
+            }
+            li { 
+                margin: 8px 0;
+                font-size: ${baseFontSize}px;
+            }
+            hr { 
+                border: none; 
+                height: 1px; 
+                background: ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#E8E8E8'}; 
+                margin: 24px 0; 
+            }
+            code {
+                background: ${isDark ? '#333333' : '#f5f5f7'};
+                color: ${isDark ? '#e0e0e0' : '#1a1a1a'};
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: ${baseFontSize * 0.9}px;
+            }
+        `;
+        
+        container.appendChild(style);
+        container.appendChild(content);
+
+        // 等待DOM更新
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // 计算内容总高度
+        const totalHeight = content.scrollHeight;
+        const headerHeight = header.offsetHeight;
+        const availableHeight = containerHeight - headerHeight;
+        const numberOfScreens = Math.ceil(totalHeight / availableHeight);
+        
+        // 生成每个section的图片
+        const images = [];
+        for (let i = 0; i < numberOfScreens; i++) {
+            // 创建新的section容器
+            const sectionContainer = document.createElement('div');
+            sectionContainer.style.cssText = `
+                width: ${containerWidth}px;
+                height: ${containerHeight}px;
+                background: ${isDark ? '#1a1a1a' : 'white'};
+                overflow: hidden;
+                position: relative;
+            `;
+            
+            // 添加头部
+            sectionContainer.innerHTML = headerHtml;
+            
+            // 创建内容区域
+            const sectionContent = document.createElement('div');
+            sectionContent.style.cssText = `
+                padding: ${containerPadding}px;
+                background: ${isDark ? '#1a1a1a' : 'white'};
+                color: ${isDark ? '#e0e0e0' : '#333333'};
+                font-size: ${baseFontSize}px;
+                line-height: 1.8;
+                height: ${containerHeight - headerHeight}px;
+                overflow: hidden;
+                position: relative;
+            `;
+            
+            // 克隆并设置内容偏移
+            const contentClone = content.cloneNode(true);
+            contentClone.style.marginTop = `-${i * availableHeight}px`;
+            sectionContent.appendChild(contentClone);
+            sectionContainer.appendChild(sectionContent);
+            
+            container.innerHTML = '';
+            container.appendChild(sectionContainer);
+
+            // 生成图片
+            try {
+                const canvas = await html2canvas(sectionContainer, {
+                    scale: renderScale,  // 提高缩放比例以增加清晰度
+                    useCORS: true,
+                    backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
+                    logging: false,
+                    width: containerWidth,
+                    height: containerHeight,
+                    onclone: (clonedDoc) => {
+                        const clonedContainer = clonedDoc.querySelector('div');
+                        if (clonedContainer) {
+                            clonedContainer.style.position = 'relative';
+                            clonedContainer.style.left = '0';
+                        }
+                    },
+                    letterRendering: true,
+                    allowTaint: true,
+                    foreignObjectRendering: true
+                });
+
+                const imageData = canvas.toDataURL('image/png', 1.0);
+                images.push(imageData);
+            } catch (err) {
+                console.error('Failed to generate section image:', err);
+                continue;
+            }
+        }
+
+        // 显示预览
+        if (images.length > 0) {
+            showSplitImagePreview(images);
+        } else {
+            showToast('生成图片失败，请重试');
+        }
+        
+    } catch (error) {
+        console.error('Split image generation failed:', error);
+        showToast('生成分屏图片失败，请重试');
+    } finally {
+        // 清理临时容器
+        if (container && container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    }
+}
+
+// 修改 showSplitImagePreview 函数
+function showSplitImagePreview(images) {
+    if (!images || images.length === 0) {
+        showToast('没有可预览的图片');
+        return;
+    }
+
+    // 重置预览容器
+    imagePreview.innerHTML = '';
+    
+    // 更新数据集
+    imagePreview.dataset.imageData = JSON.stringify(images);
+    imagePreview.dataset.isSplitView = 'true';
+    
+    // 修改预览容器的滚动行为
+    imagePreview.style.cssText = `
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        position: relative;
+    `;
+    
+    const isMobile = isMobileDevice();
+    const previewPadding = isMobile ? 12 : 24;
+    const previewGap = isMobile ? 12 : 24;
+    const borderRadius = isMobile ? 12 : 24;
+    const labelFontSize = isMobile ? 12 : 14;
+    const labelPadding = isMobile ? '4px 8px' : '6px 12px';
+    
+    const previewContainer = document.createElement('div');
+    previewContainer.className = 'preview-content';
+    previewContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: ${previewGap}px;
+        padding: ${previewPadding}px;
+        max-width: ${isMobile ? '100%' : '80%'};
+        margin: 0 auto;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        perspective: 1000;
+        -webkit-perspective: 1000;
+    `;
+    
+    // 创建并添加所有图片
+    images.forEach((imageData, index) => {
+        const imageContainer = document.createElement('div');
+        imageContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            border-radius: ${borderRadius}px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDarkMode() ? '0.3' : '0.08'});
+            background: ${isDarkMode() ? '#1a1a1a' : 'white'};
+            transition: transform 0.2s ease;
+            cursor: pointer;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
+            
+            &:hover {
+                transform: translateY(-2px) translateZ(0);
+            }
+            
+            &:active {
+                transform: translateY(0) translateZ(0);
+            }
+        `;
+        
+        const img = document.createElement('img');
+        img.src = imageData;
+        img.alt = `预览图片 ${index + 1}`;
+        img.style.cssText = `
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        `;
+
+        // 添加点击事件（支持双击关闭）
+        let lastClick = 0;
+        const doubleClickDelay = 300;
+        
+        imageContainer.addEventListener('click', (e) => {
+            const currentTime = new Date().getTime();
+            if (currentTime - lastClick < doubleClickDelay) {
+                // 双击事件
+                hideImagePreviewModal();
+            }
+            lastClick = currentTime;
+            e.stopPropagation();
+        });
+
+        imageContainer.appendChild(img);
+        
+        // 添加页码标签
+        const indexLabel = document.createElement('div');
+        indexLabel.style.cssText = `
+            position: absolute;
+            top: ${previewPadding}px;
+            right: ${previewPadding}px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: ${labelPadding};
+            border-radius: ${borderRadius / 2}px;
+            font-size: ${labelFontSize}px;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        `;
+        
+        // 添加页码图标
+        const pageIcon = document.createElement('span');
+        pageIcon.innerHTML = `
+            <svg width="${labelFontSize}" height="${labelFontSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+        `;
+        indexLabel.appendChild(pageIcon);
+        
+        // 添加页码文本
+        const pageText = document.createElement('span');
+        pageText.textContent = `${index + 1}/${images.length}`;
+        indexLabel.appendChild(pageText);
+        
+        imageContainer.appendChild(indexLabel);
+        
+        // 添加复制按钮（仅在PC端显示）
+        if (!isMobile) {
+            const copyButton = document.createElement('button');
+            copyButton.style.cssText = `
+                position: absolute;
+                bottom: ${previewPadding}px;
+                right: ${previewPadding}px;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: ${labelPadding};
+                border-radius: ${borderRadius / 2}px;
+                font-size: ${labelFontSize}px;
+                font-weight: 500;
+                border: none;
+                cursor: pointer;
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                z-index: 2;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            `;
+            
+            // 添加复制图标
+            copyButton.innerHTML = `
+                <svg width="${labelFontSize}" height="${labelFontSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>复制图片</span>
+            `;
+            
+            // 显示/隐藏复制按钮
+            imageContainer.addEventListener('mouseenter', () => {
+                copyButton.style.opacity = '1';
+            });
+            
+            imageContainer.addEventListener('mouseleave', () => {
+                copyButton.style.opacity = '0';
+            });
+            
+            // 复制按钮点击事件
+            copyButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const success = await copyImageDataToClipboard(imageData);
+                if (success) {
+                    showToast(`已复制第 ${index + 1} 张图片`);
+                }
+            });
+            
+            imageContainer.appendChild(copyButton);
+        }
+        
+        previewContainer.appendChild(imageContainer);
+    });
+    
+    imagePreview.appendChild(previewContainer);
+    imagePreviewModal.style.display = 'block';
+}
+
+// 创建备份
+function createBackup() {
+    try {
+        const backupData = {
+            markdown: markdownInput.value,
+            question: questionInput.value,
+            currentAI: currentAI,
+            timestamp: new Date().toISOString(),
+            theme: document.documentElement.getAttribute('data-theme'),
+            version: '1.0'
+        };
+        
+        // 转换为JSON字符串
+        const backupString = JSON.stringify(backupData);
+        
+        // 创建Blob
+        const blob = new Blob([backupString], { type: 'application/json' });
+        
+        // 创建下载链接
+        const a = document.createElement('a');
+        a.download = `postify-backup-${new Date().toISOString().slice(0,10)}.json`;
+        a.href = URL.createObjectURL(blob);
+        
+        // 触发下载
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        
+        showToast('备份文件已下载');
+    } catch (error) {
+        console.error('创建备份失败:', error);
+        showToast('创建备份失败，请重试');
+    }
+}
+
+// 恢复备份
+async function restoreBackup(file) {
+    try {
+        const text = await file.text();
+        const backupData = JSON.parse(text);
+        
+        // 验证备份数据
+        if (!backupData || typeof backupData !== 'object') {
+            throw new Error('无效的备份文件格式');
+        }
+        
+        // 恢复内容
+        if (backupData.markdown !== undefined) {
+            markdownInput.value = backupData.markdown;
+        }
+        
+        if (backupData.question !== undefined) {
+            questionInput.value = backupData.question;
+        }
+        
+        // 恢复AI助手选择
+        if (backupData.currentAI && AI_ASSISTANTS[backupData.currentAI]) {
+            currentAI = backupData.currentAI;
+            // 更新UI选中状态
+            document.querySelectorAll('.ai-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.ai === currentAI);
+            });
+        }
+        
+        // 恢复主题
+        if (backupData.theme) {
+            document.documentElement.setAttribute('data-theme', backupData.theme);
+            localStorage.setItem('theme', backupData.theme);
+        }
+        
+        // 保存到本地存储
+        saveToLocalStorage();
+        
+        // 更新预览
+        updatePreview();
+        
+        showToast('备份已恢复');
+    } catch (error) {
+        console.error('恢复备份失败:', error);
+        showToast('恢复备份失败：' + error.message);
+    }
+}
+
+// 添加备份按钮点击事件
+document.getElementById('backupBtn').addEventListener('click', createBackup);
+
+// 添加恢复按钮和文件选择器
+const restoreInput = document.createElement('input');
+restoreInput.type = 'file';
+restoreInput.accept = '.json';
+restoreInput.style.display = 'none';
+document.body.appendChild(restoreInput);
+
+restoreInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        restoreBackup(file);
+    }
+    restoreInput.value = ''; // 清理选择，允许选择相同文件
+});
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+    restoreInput.click();
+});

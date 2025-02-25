@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Postify.cc - 超好用的AI助手对话分享工具</title>
+    <title>Postify.cc - 超好用的AI对话分享工具</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="icon" type="image/png" href="assets/logos/postify.png">
 </head>
@@ -35,7 +35,7 @@
 
         <!-- 问题输入区域 -->
         <div class="input-section question-section">
-            <input type="text" id="questionInput" placeholder="请输入或粘贴你的问题（可选）" />
+            <input type="text" id="questionInput" placeholder="请输入或粘贴你的问题（可选）"  />
         </div>
 
         <!-- 工具栏 -->
@@ -62,9 +62,6 @@
                 <svg class="trash-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path d="M3 6H21M5 6V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V6M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <svg class="undo-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display: none;">
-                    <path d="M4 10C4 10 6 4 12 4C18 4 20 10 20 10M4 10H8M4 10L4.5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
             </button>
             <button id="likeBtn" class="icon-btn" title="点赞">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -83,14 +80,44 @@
 
         <!-- Markdown输入区域 -->
         <div class="input-section">
-            <textarea id="markdownInput" placeholder="请返回AI助手，并复制AI助手的回复粘贴到此处"></textarea>
+            <textarea 
+                id="markdownInput" 
+                class="markdown-input" 
+                placeholder="## Postify 使用指南
+
+### **什么是 Postify？**
+Postify 是一个帮助你快速分享和展示 AI 对话内容的工具。无需注册，一键生成美观的对话分享页面。
+
+### **主要功能：**
+1. **一键复制**
+   - 直接复制对话内容
+   - 保持原始格式
+
+2. **分屏预览**
+   - 自动分割长图
+   - 适合社交平台分享
+
+3. **导出长图**
+   - 生成完整长图
+   - 支持一键保存
+
+### **使用方法：**
+1. 复制 AI 助手的回复内容
+2. 粘贴到输入框
+3. 选择需要的功能
+4. 一键生成分享
+
+### **注意事项：**
+- 支持 Markdown 格式
+- 自动保持排版
+- 针对移动端优化
+
+Postify.cc - 超好用的AI助手对话分享工具"></textarea>
         </div>
 
         <!-- 操作按钮区域 -->
         <div class="action-buttons">
             <button id="copyTextBtn" class="btn primary">复制文本</button>
-            <button id="splitImageBtn" class="btn secondary">分屏切图</button>
-            <button id="exportImageBtn" class="btn secondary">导出长图</button>
         </div>
 
         <!-- 预览模态框 -->
@@ -105,27 +132,10 @@
                 </div>
             </div>
         </div>
-
-        <!-- 图片预览模态框 -->
-        <div id="imagePreviewModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>预览 - 可发至社交媒体</h3>
-                    <div class="modal-actions">
-                        <button id="copyImageBtn" class="btn secondary">复制图片</button>
-                        <button id="saveImageBtn" class="btn primary">保存图片</button>
-                    </div>
-                </div>
-                <div class="modal-body image-preview-body">
-                    <div id="imagePreview" class="image-preview"></div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- 引入依赖库 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html> 
